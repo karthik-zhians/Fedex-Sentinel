@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel Merchant Dashboard - Powered by FedEx</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        @keyframes slide-in {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-in {
+            animation: slide-in 0.4s ease-out;
+        }
+        
+        @keyframes fade-out {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.9); }
+        }
+        .fade-out {
+            animation: fade-out 0.3s ease-out forwards;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes send-decision {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); background-color: #10b981; }
+            100% { transform: scale(1); }
+        }
+        .send-decision-animation {
+            animation: send-decision 0.5s ease-out;
+        }
+        
+        .fedex-gradient {
+            background: linear-gradient(135deg, #4d148c 0%, #ff6600 100%);
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(77, 20, 140, 0.2);
+        }
+        
+        .decision-button {
+            transition: all 0.3s ease;
+        }
+        
+        .decision-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sync-pulse {
+            animation: pulse 1s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Merchant Header -->
+    <header class="bg-white shadow-md border-b-4 border-purple-600">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">Fashion Bazar Ltd.</h1>
+                        <p class="text-sm text-gray-600">Protected by <span class="font-semibold text-purple-700">FedEx Sentinel</span></p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">FedEx Sync</p>
+                        <div class="flex items-center space-x-2">
+                            <div id="fedex-sync" class="w-2 h-2 bg-green-500 rounded-full pulse-dot"></div>
+                            <span class="text-sm font-semibold text-green-700" id="sync-status">CONNECTED</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">Protection Status</p>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full pulse-dot"></div>
+                            <span class="text-sm font-semibold text-green-700">ACTIVE</span>
+                        </div>
+                    </div>
+                    <div class="w-12 h-12 fedex-gradient rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                        FB
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Decision Sent Notification -->
+    <div id="decision-notification" class="hidden fixed top-20 right-6 bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl z-50">
+        <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            <div>
+                <p class="font-bold">Decision Sent to FedEx!</p>
+                <p id="notification-message" class="text-sm"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="bg-gradient-to-r from-purple-50 to-orange-50 py-4 border-b">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="text-center">
+                    <p class="text-xs text-gray-600 uppercase">Today's Orders</p>
+                    <p id="stat-orders" class="text-2xl font-bold text-purple-700">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-600 uppercase">Protected Revenue</p>
+                    <p id="stat-protected" class="text-2xl font-bold text-green-600">₹0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-600 uppercase">Pending Decisions</p>
+                    <p id="stat-pending" class="text-2xl font-bold text-orange-600">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-600 uppercase">Auto-Protected</p>
+                    <p id="stat-auto" class="text-2xl font-bold text-blue-600">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-600 uppercase">Carbon Saved</p>
+                    <p id="stat-carbon" class="text-2xl font-bold text-emerald-600">0kg</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="container mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Orders Requiring Decision -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Pending Orders -->
+                <div class="bg-white rounded-lg shadow-lg glow-effect">
+                    <div class="p-6 border-b-2 border-orange-200 bg-gradient-to-r from-orange-50 to-red-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800">⚡ Orders Requiring Your Decision</h2>
+                                <p class="text-sm text-gray-600 mt-1">Make decisions - FedEx sees them instantly</p>
+                            </div>
+                            <span id="pending-badge" class="px-4 py-2 bg-orange-500 text-white rounded-full font-bold text-xl">0</span>
+                        </div>
+                    </div>
+                    <div id="pending-orders" class="p-6 space-y-4 max-h-[700px] overflow-y-auto">
+                        <div class="text-center py-16 text-gray-400">
+                            <svg class="w-20 h-20 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <p class="text-lg font-semibold">All orders processed!</p>
+                            <p class="text-sm mt-1">New orders will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-lg shadow-lg">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">📋 Recent Activity</h2>
+                        <p class="text-sm text-gray-600 mt-1">Your decisions synced with FedEx</p>
+                    </div>
+                    <div id="activity-log" class="p-6 space-y-3 max-h-96 overflow-y-auto">
+                        <div class="text-center py-8 text-gray-400">
+                            <p class="text-sm">No activity yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights & Analytics -->
+            <div class="space-y-6">
+                <!-- FedEx Connection Status -->
+                <div class="bg-gradient-to-br from-purple-600 to-orange-600 rounded-lg shadow-lg text-white p-6">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M13 7H7v6h6V7z"></path>
+                                <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">FedEx Network</h3>
+                            <p class="text-sm text-purple-200">Real-time sync active</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Decisions Sent Today</span>
+                            <span id="decisions-sent" class="text-lg font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Response Time</span>
+                            <span class="text-lg font-bold">< 1 sec</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Network Status</span>
+                            <span class="text-lg font-bold">🟢 LIVE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Protection Summary -->
+                <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg shadow-lg border-2 border-green-200 p-6">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-white">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800">Auto-Protection</h3>
+                            <p class="text-sm text-gray-600">Working silently for you</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Orders Auto-Blocked</span>
+                            <span id="insight-auto" class="text-lg font-bold text-green-700">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Fraud Prevented</span>
+                            <span id="insight-fraud" class="text-lg font-bold text-green-700">₹0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-700">Time Saved</span>
+                            <span id="time-saved" class="text-lg font-bold text-green-700">0 min</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Distribution -->
+                <div class="bg-white rounded-lg shadow-lg">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-bold text-gray-800">📊 Order Distribution</h2>
+                    </div>
+                    <div class="p-6">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Powered By FedEx -->
+                <div class="bg-gradient-to-r from-purple-700 to-orange-600 rounded-lg shadow-lg p-6 text-white text-center">
+                    <p class="text-sm opacity-90 mb-2">Powered by</p>
+                    <div class="text-3xl font-bold mb-2">
+                        <span>Fed</span><span class="text-orange-300">Ex</span>
+                    </div>
+                    <p class="text-xs opacity-75">Sentinel Intelligence Fabric</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Analytics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">📈 Protection Trend</h2>
+                </div>
+                <div class="p-6">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">🎯 Your Decision History</h2>
+                </div>
+                <div class="p-6">
+                    <canvas id="decisionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Merchant State
+        const merchantState = {
+            orders: 0,
+            protected: 0,
+            pending: [],
+            activity: [],
+            autoProtected: 0,
+            carbonSaved: 0,
+            approved: 0,
+            verified: 0,
+            blocked: 0,
+            decisionsSent: 0
+        };
+
+        let distributionChart, trendChart, decisionChart;
+        let orderCounter = 10000;
+
+        const orderTemplates = [
+            { customer: 'Customer 101', location: 'Patna, Bihar', item: 'Leather Jacket', value: 4500, trustScore: 23, carbonCost: 8.4 },
+            { customer: 'Customer 202', location: 'Mumbai, Maharashtra', item: 'Cotton Saree', value: 2100, trustScore: 87, carbonCost: 3.2 },
+            { customer: 'Customer 303', location: 'Ahmedabad, Gujarat', item: 'Smartphone', value: 18000, trustScore: 31, carbonCost: 2.8 },
+            { customer: 'Customer 404', location: 'Bangalore, Karnataka', item: 'Formal Dress', value: 1200, trustScore: 92, carbonCost: 2.1 },
+            { customer: 'Customer 505', location: 'Hyderabad, Telangana', item: 'Designer Watch', value: 8500, trustScore: 54, carbonCost: 3.5 },
+            { customer: 'Customer 606', location: 'Delhi, Delhi', item: 'Leather Shoes', value: 6200, trustScore: 68, carbonCost: 4.2 },
+            { customer: 'Customer 707', location: 'Chennai, Tamil Nadu', item: 'Gold Chain', value: 15000, trustScore: 45, carbonCost: 1.8 },
+            { customer: 'Customer 808', location: 'Pune, Maharashtra', item: 'Fitness Equipment', value: 12000, trustScore: 71, carbonCost: 14.2 },
+        ];
+
+        function initCharts() {
+            // Distribution Chart
+            const distCtx = document.getElementById('distributionChart').getContext('2d');
+            distributionChart = new Chart(distCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Approved', 'Verified', 'Blocked', 'Auto-Protected'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            // Trend Chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Protected Revenue (₹)',
+                        data: [],
+                        borderColor: '#7c3aed',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Decision Chart
+            const decisionCtx = document.getElementById('decisionChart').getContext('2d');
+            decisionChart = new Chart(decisionCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Approved', 'Verified', 'Blocked'],
+                    datasets: [{
+                        label: 'Your Decisions',
+                        data: [0, 0, 0],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function generateOrder() {
+            const template = orderTemplates[Math.floor(Math.random() * orderTemplates.length)];
+            const orderId = `ORD-${orderCounter++}`;
+            const scoreVariation = Math.floor(Math.random() * 10 - 5);
+            const trustScore = Math.max(0, Math.min(100, template.trustScore + scoreVariation));
+            
+            return {
+                ...template,
+                orderId,
+                trustScore,
+                timestamp: new Date().toLocaleTimeString()
+            };
+        }
+
+        function processOrder(order) {
+            merchantState.orders++;
+            
+            // Don't send to FedEx yet - wait for decision
+            showOrderDecision(order);
+            
+            updateStats();
+        }
+
+        function sendToFedEx(order) {
+    // Only send if we have a decision and haven't sent it before
+    if (order.merchantDecision && !order.sentToFedex) {
+        order.fedex_processed = false;
+        order.sync_timestamp = Date.now();
+        order.sentToFedex = true; // Mark as sent
+        
+        // Store in localStorage
+        localStorage.setItem('sentinel_new_order', JSON.stringify(order));
+        flashSyncIndicator();
+    }
+}
+
+        function sendDecisionToFedEx(order, decision) {
+            // Prevent duplicate sends
+            if (order.sentToFedex) return;
+            
+            // Send decision to FedEx dashboard
+            const decisionData = {
+                ...order,
+                decision: decision,
+                merchantDecision: decision,
+                timestamp: new Date().toLocaleTimeString(),
+                processed: false,
+                fedex_processed: false,
+                sync_timestamp: Date.now(),
+                sentToFedex: true
+            };
+            
+            localStorage.setItem('sentinel_merchant_decision', JSON.stringify(decisionData));
+            order.sentToFedex = true; // Mark as sent
+            merchantState.decisionsSent++;
+            
+            flashSyncIndicator();
+            showNotification(`${decision.toUpperCase()}: ${order.orderId} sent to FedEx`);
+        }
+
+        function flashSyncIndicator() {
+            const indicator = document.getElementById('fedex-sync');
+            const status = document.getElementById('sync-status');
+            
+            indicator.classList.add('sync-pulse');
+            status.textContent = 'SYNCING...';
+            status.classList.add('text-orange-600');
+            
+            setTimeout(() => {
+                indicator.classList.remove('sync-pulse');
+                status.textContent = 'CONNECTED';
+                status.classList.remove('text-orange-600');
+            }, 1000);
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('decision-notification');
+            const messageEl = document.getElementById('notification-message');
+            
+            messageEl.textContent = message;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 3000);
+        }
+
+        function autoProtectOrder(order) {
+            merchantState.autoProtected++;
+            merchantState.protected += order.value;
+            merchantState.carbonSaved += order.carbonCost;
+            
+            addToActivity(order, 'AUTO-PROTECTED', 'purple', '🤖');
+        }
+
+        function showOrderDecision(order) {
+            merchantState.pending.push(order);
+            updatePendingBadge();
+            
+            const container = document.getElementById('pending-orders');
+            
+            if (container.querySelector('.text-center')) {
+                container.innerHTML = '';
+            }
+
+            const riskLevel = order.trustScore < 40 ? 'high' : order.trustScore < 70 ? 'medium' : 'low';
+            const colors = {
+                high: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-600' },
+                medium: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-600' },
+                low: { bg: 'bg-green-50', border: 'border-green-300', text: 'text-green-700', badge: 'bg-green-600' }
+            };
+            const c = colors[riskLevel];
+
+            const card = document.createElement('div');
+            card.className = `slide-in border-2 ${c.border} ${c.bg} rounded-lg p-6`;
+            card.id = `order-${order.orderId}`;
+            
+            card.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-12 h-12 ${c.badge} rounded-full flex items-center justify-center text-white font-bold text-xl">
+                                ${riskLevel === 'high' ? '⚠️' : riskLevel === 'medium' ? '⚡' : '✓'}
+                            </div>
+                            <div>
+                                <p class="text-xl font-bold text-gray-800">${order.orderId}</p>
+                                <p class="text-sm text-gray-600">${order.customer}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="px-4 py-1 ${c.badge} text-white rounded-full text-xs font-bold mb-2 uppercase">
+                            ${riskLevel} Risk
+                        </div>
+                        <p class="text-xs text-gray-500">${order.timestamp}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <p class="text-xs ${c.text} font-semibold mb-1">ITEM</p>
+                        <p class="text-lg font-bold text-gray-800">${order.item}</p>
+                        <p class="text-sm text-gray-600">${order.location}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs ${c.text} font-semibold mb-1">VALUE</p>
+                        <p class="text-2xl font-bold text-gray-800">₹${order.value.toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+
+                <div class="mb-4 p-4 ${c.bg} border ${c.border} rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-sm font-semibold ${c.text}">🔍 SENTINEL AI ANALYSIS</p>
+                        <p class="text-sm font-bold ${c.text}">Trust Score: ${order.trustScore}/100</p>
+                    </div>
+                    <ul class="text-sm ${c.text} space-y-1">
+                        ${order.trustScore < 40 ? '<li>⚠️ Low trust score - high fraud probability</li>' : ''}
+                        ${order.value > 10000 ? '<li>💰 High-value transaction</li>' : ''}
+                        ${order.trustScore < 70 && order.trustScore >= 40 ? '<li>⚡ Medium risk - verification recommended</li>' : ''}
+                        ${order.trustScore >= 70 ? '<li>✓ Good trust score - low risk detected</li>' : ''}
+                        <li>📡 Decision will sync to FedEx instantly</li>
+                    </ul>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="makeDecision('${order.orderId}', 'approve')" class="decision-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg">
+                        ✓ APPROVE
+                    </button>
+                    <button onclick="makeDecision('${order.orderId}', 'verify')" class="decision-button bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg">
+                        🔍 VERIFY
+                    </button>
+                    <button onclick="makeDecision('${order.orderId}', 'block')" class="decision-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg">
+                        ✕ BLOCK
+                    </button>
+                </div>
+            `;
+
+            container.insertBefore(card, container.firstChild);
+        }
+
+        window.makeDecision = function(orderId, decision) {
+            const order = merchantState.pending.find(o => o.orderId === orderId);
+            if (!order || order.decisionMade) return; // Prevent multiple decisions
+            
+            order.decisionMade = true; // Mark decision as made
+            order.merchantDecision = decision;
+            
+            const card = document.getElementById(`order-${orderId}`);
+            card.classList.add('send-decision-animation');
+            
+            // Send decision to FedEx (only once)
+            sendDecisionToFedEx(order, decision);
+            
+            setTimeout(() => {
+                card.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    merchantState.pending = merchantState.pending.filter(o => o.orderId !== orderId);
+                    
+                    if (decision === 'approve') {
+                        approveOrder(order);
+                    } else if (decision === 'verify') {
+                        verifyOrder(order);
+                    } else if (decision === 'block') {
+                        blockOrder(order);
+                    }
+                    
+                    card.remove();
+                    updateStats();
+                    updatePendingBadge();
+                    
+                    if (merchantState.pending.length === 0) {
+                        document.getElementById('pending-orders').innerHTML = `
+                            <div class="text-center py-16 text-gray-400">
+                                <svg class="w-20 h-20 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p class="text-lg font-semibold">All orders processed!</p>
+                                <p class="text-sm mt-1">New orders will appear here</p>
+                            </div>
+                        `;
+                    }
+                }, 300);
+            }, 500);
+        };
+
+        function approveOrder(order, auto = false) {
+            merchantState.approved++;
+            addToActivity(order, auto ? 'AUTO-APPROVED' : 'APPROVED', 'green', '✓');
+        }
+
+        function verifyOrder(order) {
+            merchantState.verified++;
+            addToActivity(order, 'VERIFICATION REQUIRED', 'yellow', '🔍');
+        }
+
+        function blockOrder(order) {
+            merchantState.blocked++;
+            merchantState.protected += order.value;
+            merchantState.carbonSaved += order.carbonCost;
+            addToActivity(order, 'BLOCKED', 'red', '✕');
+        }
+
+        function addToActivity(order, status, color, icon) {
+            const colorClasses = {
+                green: 'bg-green-50 border-l-4 border-green-500',
+                yellow: 'bg-yellow-50 border-l-4 border-yellow-500',
+                red: 'bg-red-50 border-l-4 border-red-500',
+                purple: 'bg-purple-50 border-l-4 border-purple-500'
+            };
+
+            const textClasses = {
+                green: 'text-green-700',
+                yellow: 'text-yellow-700',
+                red: 'text-red-700',
+                purple: 'text-purple-700'
+            };
+
+            const item = {
+                ...order,
+                status,
+                color,
+                icon,
+                time: new Date().toLocaleTimeString()
+            };
+
+            merchantState.activity.unshift(item);
+            if (merchantState.activity.length > 10) merchantState.activity.pop();
+
+            const container = document.getElementById('activity-log');
+            container.innerHTML = merchantState.activity.map(a => `
+                <div class="flex items-center justify-between p-3 ${colorClasses[a.color]} rounded">
+                    <div class="flex items-center space-x-3 flex-1">
+                        <span class="text-xl">${a.icon}</span>
+                        <div>
+                            <p class="font-semibold text-sm">${a.orderId} • ${a.customer}</p>
+                            <p class="text-xs text-gray-600">${a.item} • ₹${a.value.toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold ${textClasses[a.color]}">${a.status}</p>
+                        <p class="text-xs text-gray-500">${a.time}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('stat-orders').textContent = merchantState.orders;
+            document.getElementById('stat-protected').textContent = '₹' + (merchantState.protected / 100000).toFixed(1) + 'L';
+            document.getElementById('stat-auto').textContent = merchantState.autoProtected;
+            document.getElementById('stat-carbon').textContent = merchantState.carbonSaved.toFixed(1) + 'kg';
+            document.getElementById('decisions-sent').textContent = merchantState.decisionsSent;
+            document.getElementById('insight-auto').textContent = merchantState.autoProtected;
+            document.getElementById('insight-fraud').textContent = '₹' + (merchantState.protected / 100000).toFixed(1) + 'L';
+            document.getElementById('time-saved').textContent = (merchantState.autoProtected * 2) + ' min';
+            
+            // Update charts
+            distributionChart.data.datasets[0].data = [merchantState.approved, merchantState.verified, merchantState.blocked, merchantState.autoProtected];
+            distributionChart.update();
+            
+            trendChart.data.labels.push(new Date().toLocaleTimeString());
+            trendChart.data.datasets[0].data.push(merchantState.protected);
+            if (trendChart.data.labels.length > 10) {
+                trendChart.data.labels.shift();
+                trendChart.data.datasets[0].data.shift();
+            }
+            trendChart.update();
+            
+            decisionChart.data.datasets[0].data = [merchantState.approved, merchantState.verified, merchantState.blocked];
+            decisionChart.update();
+        }
+
+        function updatePendingBadge() {
+            document.getElementById('pending-badge').textContent = merchantState.pending.length;
+            document.getElementById('stat-pending').textContent = merchantState.pending.length;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            
+            // Generate orders every 4 seconds
+            setInterval(() => {
+                const order = generateOrder();
+                processOrder(order);
+            }, 20000);
+            
+            // Initial orders
+            setTimeout(() => processOrder(generateOrder()), 20000);
+            setTimeout(() => processOrder(generateOrder()), 20000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FedEx Sentinel Intelligence - Operations Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(0.95); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.7; }
+        }
+        .pulse-animation {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes slide-in {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .slide-in {
+            animation: slide-in 0.4s ease-out;
+        }
+        
+        @keyframes merchant-decision-flash {
+            0% { background-color: #fef3c7; }
+            50% { background-color: #fde047; }
+            100% { background-color: white; }
+        }
+        .merchant-decision-flash {
+            animation: merchant-decision-flash 1s ease-out;
+        }
+        
+        .fedex-gradient {
+            background: linear-gradient(135deg, #4d148c 0%, #ff6600 100%);
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 20px rgba(77, 20, 140, 0.3);
+        }
+        
+        .sync-indicator {
+            transition: all 0.3s ease;
+        }
+        
+        .sync-active {
+            background-color: #10b981 !important;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- FedEx Header -->
+    <header class="fedex-gradient text-white shadow-2xl">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-4xl font-bold tracking-tight">
+                        <span class="text-white">Fed</span><span class="text-orange-400">Ex</span>
+                    </div>
+                    <div class="h-10 w-px bg-white opacity-30"></div>
+                    <div>
+                        <h1 class="text-xl font-bold">SENTINEL</h1>
+                        <p class="text-xs text-purple-200">Operations Intelligence Center</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <p class="text-xs text-purple-200">Global Network Status</p>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-400 rounded-full pulse-animation"></div>
+                            <span class="text-sm font-semibold">ACTIVE • 847 Merchants</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-purple-200">Merchant Sync</p>
+                        <div class="flex items-center space-x-2">
+                            <div id="sync-indicator" class="w-2 h-2 bg-green-400 rounded-full sync-indicator"></div>
+                            <span class="text-sm font-semibold" id="sync-status">SYNCED</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-10 h-10 bg-orange-500 rounded flex items-center justify-center font-bold text-lg">
+                            OP
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Real-Time Alert Banner -->
+    <div id="alert-banner" class="hidden bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 shadow-lg">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-6 h-6 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <span id="alert-message" class="font-bold text-sm"></span>
+                </div>
+                <button onclick="closeAlert()" class="text-white hover:text-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Center Stats -->
+    <div class="bg-white shadow-md border-b-2 border-purple-200">
+        <div class="container mx-auto px-6 py-4">
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-4">
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Total Processed</p>
+                    <p id="stat-total" class="text-2xl font-bold text-purple-700">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Auto-Blocked</p>
+                    <p id="stat-auto-blocked" class="text-2xl font-bold text-red-600">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Merchant Decisions</p>
+                    <p id="stat-merchant-decisions" class="text-2xl font-bold text-orange-600">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Fraud Saved</p>
+                    <p id="stat-fraud" class="text-2xl font-bold text-green-600">₹0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">CO₂ Prevented</p>
+                    <p id="stat-carbon" class="text-2xl font-bold text-emerald-600">0kg</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Approved</p>
+                    <p id="stat-approved" class="text-2xl font-bold text-green-600">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Avg Response</p>
+                    <p class="text-2xl font-bold text-blue-600">185ms</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="container mx-auto px-6 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left: Real-Time Processing -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Live Shipment Stream -->
+                <div class="bg-white rounded-lg shadow-lg glow-effect">
+                    <div class="p-6 border-b-2 border-purple-100 fedex-gradient text-white rounded-t-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-xl font-bold">⚡ Live Shipment Stream</h2>
+                                <p class="text-sm text-purple-100 mt-1">Real-time fraud detection & merchant decisions</p>
+                            </div>
+                            <div class="flex items-center space-x-2 bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                                <div class="w-2 h-2 bg-green-400 rounded-full pulse-animation"></div>
+                                <span class="text-xs font-semibold">LIVE</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="shipment-stream" class="p-6 space-y-3 max-h-[600px] overflow-y-auto">
+                        <div class="text-center py-12 text-gray-400">
+                            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <p>Initializing network intelligence...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Analysis -->
+                <div class="bg-white rounded-lg shadow-lg">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">🕸️ Behavioral Network Analysis</h2>
+                        <p class="text-sm text-gray-600 mt-1">Graph Neural Network clustering in real-time</p>
+                    </div>
+                    <div class="p-6">
+                        <canvas id="networkGraph" height="250"></canvas>
+                        <div class="mt-6 grid grid-cols-3 gap-4">
+                            <div class="text-center p-4 bg-green-50 rounded-lg">
+                                <p class="text-xs text-gray-600 mb-1">Active Nodes</p>
+                                <p id="graph-nodes" class="text-2xl font-bold text-green-700">523,847</p>
+                            </div>
+                            <div class="text-center p-4 bg-red-50 rounded-lg">
+                                <p class="text-xs text-gray-600 mb-1">Fraud Clusters</p>
+                                <p id="graph-clusters" class="text-2xl font-bold text-red-700">3</p>
+                            </div>
+                            <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                                <p class="text-xs text-gray-600 mb-1">Risk Links</p>
+                                <p id="graph-edges" class="text-2xl font-bold text-yellow-700">47</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Intelligence Panels -->
+            <div class="space-y-6">
+                <!-- Merchant Activity Monitor -->
+                <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-lg border-2 border-orange-200">
+                    <div class="p-6 border-b border-orange-200">
+                        <h2 class="text-xl font-bold text-orange-800">👤 Merchant Activity</h2>
+                        <p class="text-sm text-orange-600 mt-1">Live decision monitoring</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+                                <span class="text-sm font-medium text-gray-700">Merchant: Fashion Bazar Ltd.</span>
+                                <span id="merchant-status" class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">ACTIVE</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+                                <span class="text-sm font-medium text-gray-700">Decisions Today</span>
+                                <span id="merchant-decision-count" class="text-lg font-bold text-orange-700">0</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+                                <span class="text-sm font-medium text-gray-700">Last Activity</span>
+                                <span id="merchant-last-activity" class="text-xs text-gray-500">--:--:--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Block Monitor -->
+                <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-lg border-2 border-red-200">
+                    <div class="p-6 border-b border-red-200">
+                        <h2 class="text-xl font-bold text-red-800">🤖 Auto-Block Engine</h2>
+                        <p class="text-sm text-red-600 mt-1">AI-powered instant intervention</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+                                <span class="text-sm font-medium text-gray-700">Status</span>
+                                <span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">ACTIVE</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+                                <span class="text-sm font-medium text-gray-700">Threshold</span>
+                                <span class="text-lg font-bold text-purple-700">< ₹10,000</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+                                <span class="text-sm font-medium text-gray-700">Today's Blocks</span>
+                                <span id="auto-block-count" class="text-lg font-bold text-red-600">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Distribution -->
+                <div class="bg-white rounded-lg shadow-lg">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">📊 Decision Distribution</h2>
+                    </div>
+                    <div class="p-6">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Analytics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">📈 Fraud Prevention Impact</h2>
+                </div>
+                <div class="p-6">
+                    <canvas id="impactChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">🌍 Decision Type Timeline</h2>
+                </div>
+                <div class="p-6">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // System State
+        const fedexState = {
+            total: 0,
+            autoBlocked: 0,
+            merchantDecisions: 0,
+            approved: 0,
+            verified: 0,
+            blocked: 0,
+            fraudSaved: 0,
+            carbonSaved: 0,
+            networkNodes: 523847,
+            fraudClusters: 3,
+            riskConnections: 47,
+            lastMerchantActivity: null
+        };
+
+        let networkChart, riskChart, impactChart, timelineChart;
+        let orderCounter = 10000;
+
+        // Listen for merchant decisions
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'sentinel_merchant_decision') {
+                const decision = JSON.parse(e.newValue);
+                handleMerchantDecision(decision);
+            }
+        });
+
+        // Poll for changes (backup for same-window testing)
+        setInterval(() => {
+            const decision = localStorage.getItem('sentinel_merchant_decision');
+            if (decision) {
+                const parsed = JSON.parse(decision);
+                if (!parsed.processed) {
+                    handleMerchantDecision(parsed);
+                    parsed.processed = true;
+                    localStorage.setItem('sentinel_merchant_decision', JSON.stringify(parsed));
+                }
+            }
+        }, 500);
+
+        // Listen for new orders from merchant
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'sentinel_new_order') {
+                const order = JSON.parse(e.newValue);
+                if (!order.fedex_processed) {
+                    processOrderFromMerchant(order);
+                }
+            }
+        });
+
+        function handleMerchantDecision(decision) {
+            // Check if we've already processed this decision
+            const decisionKey = `${decision.orderId}_${decision.decision || decision.merchantDecision}`;
+            if (!window.processedDecisions) {
+                window.processedDecisions = new Set();
+            }
+            
+            if (window.processedDecisions.has(decisionKey)) {
+                console.log(`Duplicate decision detected: ${decisionKey}`);
+                return; // Already processed
+            }
+            
+            window.processedDecisions.add(decisionKey);
+            
+            flashSyncIndicator();
+            fedexState.merchantDecisions++;
+            fedexState.lastMerchantActivity = new Date().toLocaleTimeString();
+            
+            const finalDecision = decision.decision || decision.merchantDecision;
+            
+            // Show alert
+            showAlert(`🎯 MERCHANT DECISION: ${decision.orderId} - ${finalDecision.toUpperCase()} (₹${decision.value.toLocaleString('en-IN')})`);
+            
+            // Update stream with merchant decision
+            addToStream({
+                ...decision,
+                source: 'MERCHANT',
+                timestamp: new Date().toLocaleTimeString()
+            }, finalDecision.toUpperCase(), getColorForDecision(finalDecision), getIconForDecision(finalDecision));
+            
+            // Update stats based on decision
+            if (finalDecision === 'approve') {
+                fedexState.approved++;
+            } else if (finalDecision === 'verify') {
+                fedexState.verified++;
+            } else if (finalDecision === 'block') {
+                fedexState.blocked++;
+                fedexState.fraudSaved += decision.value;
+                fedexState.carbonSaved += decision.carbonCost || 5;
+            }
+            
+            updateUI();
+        }
+
+        function processOrderFromMerchant(order) {
+    // Create a unique key based on order ID and decision (not timestamp)
+    const orderKey = `${order.orderId}_${order.merchantDecision || order.decision}`;
+    
+    // Initialize Set if not exists
+    if (!window.processedOrderKeys) {
+        window.processedOrderKeys = new Set();
+    }
+    
+    // Check for duplicate
+    if (window.processedOrderKeys.has(orderKey)) {
+        console.log(`Duplicate order detected and skipped: ${orderKey}`);
+        return; // Skip if already processed
+    }
+    
+    // Add to processed set
+    window.processedOrderKeys.add(orderKey);
+    fedexState.total++;
+    
+    const finalDecision = order.merchantDecision || order.decision;
+    
+    // Process orders only with merchant decisions
+    if (finalDecision) {
+        if (finalDecision === 'block') {
+            fedexState.autoBlocked++;
+            fedexState.fraudSaved += order.value;
+            fedexState.carbonSaved += order.carbonCost || 5;
+            
+            showAlert(`🎯 MERCHANT BLOCKED: ${order.orderId} - ₹${order.value.toLocaleString('en-IN')}`);
+            addToStream(order, 'BLOCKED', 'red', '✕');
+        } else if (finalDecision === 'verify') {
+            showAlert(`🔍 MERCHANT VERIFY: ${order.orderId} - ₹${order.value.toLocaleString('en-IN')}`);
+            addToStream(order, 'VERIFY', 'yellow', '🔍');
+        } else if (finalDecision === 'approve') {
+            showAlert(`✓ MERCHANT APPROVED: ${order.orderId} - ₹${order.value.toLocaleString('en-IN')}`);
+            addToStream(order, 'APPROVED', 'green', '✓');
+        }
+    }
+    
+    // Mark the order as processed in localStorage
+    order.fedex_processed = true;
+    localStorage.setItem('sentinel_new_order', JSON.stringify(order));
+    
+    updateUI();
+}
+
+        function getColorForDecision(decision) {
+            const colors = {
+                'approve': 'green',
+                'verify': 'yellow',
+                'block': 'red'
+            };
+            return colors[decision] || 'gray';
+        }
+
+        function getIconForDecision(decision) {
+            const icons = {
+                'approve': '✓',
+                'verify': '🔍',
+                'block': '✕'
+            };
+            return icons[decision] || '?';
+        }
+
+        function flashSyncIndicator() {
+            const indicator = document.getElementById('sync-indicator');
+            const status = document.getElementById('sync-status');
+            
+            indicator.classList.add('sync-active');
+            status.textContent = 'SYNCING...';
+            
+            setTimeout(() => {
+                indicator.classList.remove('sync-active');
+                status.textContent = 'SYNCED';
+            }, 1000);
+        }
+
+        function addToStream(shipment, status, color, icon) {
+            const container = document.getElementById('shipment-stream');
+            
+            if (container.querySelector('.text-center')) {
+                container.innerHTML = '';
+            }
+
+            const colorClasses = {
+                red: 'bg-red-50 border-red-300',
+                yellow: 'bg-yellow-50 border-yellow-300',
+                green: 'bg-green-50 border-green-300',
+                orange: 'bg-orange-50 border-orange-300'
+            };
+
+            const textClasses = {
+                red: 'text-red-700',
+                yellow: 'text-yellow-700',
+                green: 'text-green-700',
+                orange: 'text-orange-700'
+            };
+
+            const card = document.createElement('div');
+            card.className = `slide-in border-l-4 ${colorClasses[color]} rounded-lg p-4 ${shipment.source === 'MERCHANT' ? 'merchant-decision-flash' : ''}`;
+            
+            card.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center space-x-3 flex-1">
+                        <span class="text-2xl">${icon}</span>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <p class="font-bold text-sm">${shipment.orderId}</p>
+                                ${shipment.source === 'MERCHANT' ? '<span class="px-2 py-0.5 bg-orange-500 text-white text-xs rounded-full font-bold">MERCHANT</span>' : ''}
+                            </div>
+                            <p class="text-xs text-gray-600">${shipment.customer}</p>
+                            <p class="text-xs text-gray-500">${shipment.location || ''}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs font-bold ${textClasses[color]}">${status}</p>
+                        <p class="text-xs text-gray-500">${shipment.timestamp}</p>
+                    </div>
+                </div>
+                <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                        <p class="text-gray-500">Item</p>
+                        <p class="font-semibold">${shipment.item}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Value</p>
+                        <p class="font-semibold">₹${shipment.value.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Trust Score</p>
+                        <p class="font-bold ${shipment.trustScore >= 70 ? 'text-green-600' : shipment.trustScore >= 40 ? 'text-yellow-600' : 'text-red-600'}">${shipment.trustScore}/100</p>
+                    </div>
+                </div>
+            `;
+
+            container.insertBefore(card, container.firstChild);
+            
+            while (container.children.length > 8) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function showAlert(message) {
+            const banner = document.getElementById('alert-banner');
+            const messageEl = document.getElementById('alert-message');
+            messageEl.textContent = message;
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 10000);
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-banner').classList.add('hidden');
+        }
+
+        function updateUI() {
+            document.getElementById('stat-total').textContent = fedexState.total;
+            document.getElementById('stat-auto-blocked').textContent = fedexState.autoBlocked;
+            document.getElementById('stat-merchant-decisions').textContent = fedexState.merchantDecisions;
+            document.getElementById('stat-fraud').textContent = '₹' + (fedexState.fraudSaved / 100000).toFixed(1) + 'L';
+            document.getElementById('stat-carbon').textContent = fedexState.carbonSaved.toFixed(1) + 'kg';
+            document.getElementById('stat-approved').textContent = fedexState.approved;
+            document.getElementById('auto-block-count').textContent = fedexState.autoBlocked;
+            document.getElementById('merchant-decision-count').textContent = fedexState.merchantDecisions;
+            
+            if (fedexState.lastMerchantActivity) {
+                document.getElementById('merchant-last-activity').textContent = fedexState.lastMerchantActivity;
+            }
+            
+            // Update charts
+            riskChart.data.datasets[0].data = [fedexState.autoBlocked, fedexState.approved, fedexState.verified, fedexState.blocked];
+            riskChart.update();
+            
+            impactChart.data.labels.push(new Date().toLocaleTimeString());
+            impactChart.data.datasets[0].data.push(fedexState.fraudSaved);
+            if (impactChart.data.labels.length > 10) {
+                impactChart.data.labels.shift();
+                impactChart.data.datasets[0].data.shift();
+            }
+            impactChart.update();
+            
+            timelineChart.data.labels.push(new Date().toLocaleTimeString());
+            timelineChart.data.datasets[0].data.push(fedexState.autoBlocked);
+            timelineChart.data.datasets[1].data.push(fedexState.merchantDecisions);
+            if (timelineChart.data.labels.length > 10) {
+                timelineChart.data.labels.shift();
+                timelineChart.data.datasets[0].data.shift();
+                timelineChart.data.datasets[1].data.shift();
+            }
+            timelineChart.update();
+            
+            // Update network stats
+            fedexState.networkNodes += Math.floor(Math.random() * 100);
+            document.getElementById('graph-nodes').textContent = fedexState.networkNodes.toLocaleString('en-IN');
+        }
+
+        function initCharts() {
+            // Network Graph
+            const networkCtx = document.getElementById('networkGraph').getContext('2d');
+            networkChart = new Chart(networkCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Trusted',
+                        data: generateNetworkData(50, 'low'),
+                        backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                        pointRadius: 5
+                    }, {
+                        label: 'Medium Risk',
+                        data: generateNetworkData(25, 'medium'),
+                        backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                        pointRadius: 5
+                    }, {
+                        label: 'High Risk',
+                        data: generateNetworkData(10, 'high'),
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        pointRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { x: { display: false }, y: { display: false } }
+                }
+            });
+
+            // Risk Distribution
+            const riskCtx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Auto-Blocked', 'Approved', 'Verified', 'Blocked'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#dc2626', '#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            // Impact Chart
+            const impactCtx = document.getElementById('impactChart').getContext('2d');
+            impactChart = new Chart(impactCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Fraud Prevented (₹)',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Timeline Chart
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+            timelineChart = new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Auto-Blocked',
+                        data: [],
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Merchant Decisions',
+                        data: [],
+                        borderColor: '#ff6600',
+                        backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function generateNetworkData(count, risk) {
+            const data = [];
+            const centerX = 50, centerY = 50;
+            const radius = risk === 'high' ? 15 : risk === 'medium' ? 30 : 45;
+            
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count;
+                const r = radius + (Math.random() * 10 - 5);
+                data.push({ x: centerX + r * Math.cos(angle), y: centerY + r * Math.sin(angle) });
+            }
+            return data;
+        }
+
+        // Listen for merchant orders continuously
+        setInterval(() => {
+            const orderData = localStorage.getItem('sentinel_new_order');
+            if (orderData) {
+                const order = JSON.parse(orderData);
+                const orderId = order.orderId;
+
+                if (order.fedex_processed) {
+            localStorage.removeItem('sentinel_new_order'); // Remove processed order
+        }
+                
+                // Check if we've already processed this order
+                if (!window.processedOrders) {
+                    window.processedOrders = new Set();
+                }
+                
+                if (!window.processedOrders.has(orderId)) {
+                    window.processedOrders.add(orderId);
+                    processOrderFromMerchant(order);
+                }
+            }
+        }, 500);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            
+            // Initialize tracking sets to prevent duplicates
+            window.processedOrders = new Set();
+            window.processedOrderKeys = new Set();
+            window.processedDecisions = new Set();
+            
+            // Clear any old data
+            localStorage.removeItem('sentinel_merchant_decision');
+            localStorage.removeItem('sentinel_new_order');
+        });
+    </script>
+</body>
+</html>
